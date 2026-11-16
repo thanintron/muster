@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Muster Roll Call</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c62828">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#f4f4f4;color:#222}
+header{background:#c62828;color:#fff;padding:10px 12px;position:sticky;top:0;z-index:5}
+header h1{font-size:18px;margin:0}header small{opacity:.9}
+nav{display:flex;background:#fff;border-bottom:1px solid #ddd;position:sticky;top:50px;z-index:5}
+nav button{flex:1;padding:12px 2px;border:0;background:none;font-size:14px}
+nav button.on{border-bottom:3px solid #c62828;font-weight:bold}
+section{display:none;padding:12px}section.on{display:block}
+.card{background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px #0002}
+.btn{display:inline-block;padding:10px 12px;border:0;border-radius:8px;background:#c62828;color:#fff;font-size:15px;margin:3px 0;text-decoration:none}
+.btn.g{background:#2e7d32}.btn.s{background:#555}.btn.w{width:100%;padding:14px}
+input,select,textarea{width:100%;padding:10px;font-size:16px;border:1px solid #bbb;border-radius:8px;margin:4px 0}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.kpi div{background:#fff;border-radius:10px;padding:10px;text-align:center;box-shadow:0 1px 3px #0002}
+.kpi b{display:block;font-size:28px}
+.row{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid #eee}
+.row .n{flex:1}.row small{color:#666}.row select{width:auto}
+.tag{font-size:12px;padding:3px 6px;border-radius:6px;background:#eee}
+video{width:100%;border-radius:10px;background:#000;max-height:45vh;object-fit:cover}
+#flash{position:fixed;left:0;right:0;bottom:0;padding:20px;font-size:20px;text-align:center;color:#fff;display:none;z-index:9}
+.qrbox{text-align:center}.qrbox img{width:90%;max-width:380px;image-rendering:pixelated}
+td,th{padding:4px;border-bottom:1px solid #eee}
+#printArea{display:none}
+@media print{
+ body>*:not(#printArea){display:none!important}#printArea{display:block}
+ .st{display:inline-block;width:45mm;height:32mm;border:1px dashed #999;margin:1mm;text-align:center;font-size:8pt;overflow:hidden;vertical-align:top;padding:1mm}
+ .st img{width:20mm;height:20mm}
+ .vc{display:inline-block;width:85mm;height:54mm;border:1px solid #000;margin:2mm;text-align:center;padding:3mm;font-size:16pt;vertical-align:top}
+ .vc img{width:34mm;height:34mm}
+ table{border-collapse:collapse;width:100%;font-size:10pt}td,th{border:1px solid #000;padding:3px}
+}
+</style>
+</head>
+<body>
+<header><h1>🚨 Muster Roll Call</h1><small id="hdr"></small></header>
+<nav>
+ <button data-t="scan" class="on">สแกน</button><button data-t="miss">ยังไม่มา</button>
+ <button data-t="dash">สรุป</button><button data-t="vis">แขก</button><button data-t="set">ตั้งค่า</button>
+</nav>
+
+<section id="scan" class="on">
+ <div class="card" id="evBox"></div>
+ <div class="card"><video id="video" playsinline muted></video>
+  <button class="btn g w" id="camBtn">📷 เปิดกล้องสแกน</button></div>
+ <div class="card"><input id="q" placeholder="ค้นหา: ชื่อ / รหัส / ชื่อย่อ (คนลืมบัตร)"><div id="qRes"></div></div>
+</section>
+
+<section id="miss">
+ <div class="card"><select id="divF"></select><input id="mq" placeholder="ค้นหาในรายชื่อที่ยังไม่มา"></div>
+ <div class="card"><b id="missN"></b><div id="missList"></div></div>
+</section>
+
+<section id="dash">
+ <div class="kpi" id="kpi"></div>
+ <div class="card"><b>📤 ส่งยอดให้เครื่องหลัก (ไม่ใช้เน็ต)</b>
+  <button class="btn w" onclick="sendQR()">สร้าง QR ส่งยอด</button><div id="sendOut"></div>
+  <small>เครื่องหลัก: เปิดกล้องที่แท็บ "สแกน" แล้วสแกน QR นี้ทีละหน้า ระบบจะรวมยอดเองโดยไม่นับซ้ำ</small></div>
+ <div class="card"><b>แยกตาม Division</b><div id="divTable"></div></div>
+ <div class="card"><b>มาแล้ว (ล่าสุดอยู่บน)</b><div id="hereList"></div></div>
+ <button class="btn s w" onclick="exportCSV()">⬇ Export ผลเป็น CSV</button>
+</section>
+
+<section id="vis">
+ <div class="card"><b>ลงทะเบียนแขก / ผู้รับเหมา</b>
+  <select id="vCard"></select><input id="vName" placeholder="ชื่อแขก">
+  <input id="vCo" placeholder="บริษัท"><input id="vPhone" placeholder="เบอร์โทร" inputmode="tel">
+  <input id="vHost" placeholder="รหัสพนักงานผู้ดูแล (Host)">
+  <button class="btn g w" onclick="visIn()">✔ Check-in</button></div>
+ <div class="card"><b>แขกที่อยู่ในพื้นที่</b><div id="visList"></div></div>
+</section>
+
+<section id="set">
+ <div class="card"><b>1) เครื่องนี้</b>
+  <input id="devName" placeholder="ชื่อเครื่อง เช่น W1-Somchai"><select id="siteSel"></select>
+  <button class="btn w" onclick="saveDev()">บันทึก</button></div>
+ <div class="card"><b>2) นำเข้ารายชื่อพนักงาน</b><br>
+  <small>คัดลอกตารางจาก Excel ทั้งหมด (รวมหัวตาราง) แล้ววางในช่องนี้ หรือเลือกไฟล์ CSV UTF-8</small>
+  <textarea id="paste" rows="4"></textarea>
+  <button class="btn w" onclick="importText($('#paste').value)">นำเข้าจากข้อความ</button>
+  <input type="file" id="file" accept=".csv,.txt"><div id="empInfo"></div></div>
+ <div class="card"><b>3) รอบการตรวจนับ</b>
+  <select id="evType"><option value="DRILL">ซ้อม</option><option value="REAL">เหตุจริง</option></select>
+  <input id="evNo" type="number" value="1" min="1" placeholder="รอบที่">
+  <button class="btn g w" onclick="startEv()">▶ เริ่มรอบ</button>
+  <button class="btn s w" onclick="endEv()">■ ปิดรอบ</button></div>
+ <div class="card"><b>4) พิมพ์</b>
+  <button class="btn s w" onclick="printStickers()">สติกเกอร์ QR ติดหลังบัตรพนักงาน</button>
+  <button class="btn s w" onclick="printVisCards()">บัตร Visitor V01–V20</button>
+  <button class="btn s w" onclick="printPaper()">รายชื่อกระดาษ (กระเป๋าฉุกเฉิน)</button></div>
+ <div class="card"><b>ระบบ</b><div id="sysInfo"></div>
+  <button class="btn s w" onclick="wipe()">ลบข้อมูลทั้งหมดในเครื่องนี้</button></div>
+</section>
+
+<div id="flash"></div><div id="printArea"></div>
+<script src="jsQR.js"></script>
+<script src="qrcode.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const S={get(k,d){try{const v=localStorage.getItem('mu_'+k);return v?JSON.parse(v):d}catch(e){return d}},
+         set(k,v){localStorage.setItem('mu_'+k,JSON.stringify(v))}};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let emp=S.get('emp',[]),site=S.get('site',''),dev=S.get('dev','Device'),vis=S.get('vis',[]),
+    ev=S.get('ev',null),rec=S.get('rec',{}),exc=S.get('exc',{});
+vis=vis.filter(v=>!v.out||Date.now()-new Date(v.out).getTime()<90*864e5);S.set('vis',vis); // PDPA: ลบแขกเก่ากว่า 90 วัน
+const EXC=['ลา','WFH','นอกสถานที่','อยู่อีกไซต์'];
+
+/* ---------- ข้อมูล ---------- */
+function people(){
+  const e=emp.filter(x=>!site||x.site===site);
+  const v=vis.filter(x=>!x.out).map(x=>({id:x.card,name:x.name+' (แขก)',short:(x.co||'')+' Host:'+(x.host||'-'),div:'แขก',phone:x.phone,v:1}));
+  return e.concat(v);
+}
+const findP=id=>people().find(p=>p.id===id)||emp.find(e=>e.id===id);
+const nameOf=id=>{const e=emp.find(x=>x.id===id);return e?e.name+' ['+(e.site||'-')+']':id};
+const R=()=>ev?(rec[ev.id]=rec[ev.id]||{}):{};
+const X=()=>ev?(exc[ev.id]=exc[ev.id]||{}):{};
+function calc(){
+  const r=R(),x=X(),P=people(),ids=new Set(P.map(p=>p.id));
+  return{P,r,x,here:P.filter(p=>r[p.id]),exs:P.filter(p=>!r[p.id]&&x[p.id]),
+         miss:P.filter(p=>!r[p.id]&&!x[p.id]),other:Object.keys(r).filter(id=>!ids.has(id))};
+}
+
+/* ---------- การนับ ---------- */
+function onCode(raw){
+  const c=String(raw).trim();
+  if(c.startsWith('MU1|'))return merge(c);
+  if(!ev){flash('ยังไม่ได้เริ่มรอบตรวจนับ','#e65100');beep(220);return}
+  const id=c.toUpperCase().replace(/[^\w-]/g,''),p=findP(id);
+  if(!p&&!/^V\d{2}$/.test(id)){flash('ไม่พบรหัส '+id,'#b71c1c');beep(220);return}
+  mark(id,'QR',p?p.name:'บัตรแขก '+id);
+}
+function mark(id,how,name){
+  const r=R();
+  if(r[id]){flash('นับแล้ว: '+name,'#f9a825');beep(440);return}
+  r[id]={t:new Date().toISOString(),by:dev,how};S.set('rec',rec);
+  flash('✔ '+name,'#2e7d32');beep(880);navigator.vibrate&&navigator.vibrate(120);render();
+}
+function markM(id){if(!ev)return alert('ยังไม่ได้เริ่มรอบตรวจนับ');const p=findP(id);mark(id,'MANUAL',p?p.name:id);$('#q').dispatchEvent(new Event('input'))}
+function unmark(id){if(confirm('ยกเลิกการนับ '+id+' ?')){delete R()[id];S.set('rec',rec);render()}}
+function setExc(id,v){if(!ev)return alert('ยังไม่ได้เริ่มรอบตรวจนับ');const x=X();if(v)x[id]=v;else delete x[id];S.set('exc',exc);render()}
+
+/* ---------- รอบการนับ ---------- */
+function startEv(){
+  const d=new Date(),id=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')
+    +'-'+$('#evType').value+'-'+($('#evNo').value||1);
+  ev={id,start:d.toISOString()};S.set('ev',ev);render();go('scan');flash('เริ่มรอบ '+id,'#1565c0');
+}
+function quick(t){$('#evType').value=t;$('#evNo').value=1;startEv()}
+function endEv(){if(ev&&confirm('ปิดรอบ '+ev.id+' ? (ยัง Export ได้)')){S.set('lastEv',ev);ev=null;S.set('ev',null);render()}}
+
+/* ---------- รวมยอดหลายเครื่องผ่าน QR ---------- */
+function qrImg(text,cell){
+  if(!window.qrcode)return'<p style="color:#c62828">ไม่พบ qrcode.js</p>';
+  const q=qrcode(0,'L');q.addData(text);q.make();return q.createImgTag(cell,8);
+}
+function sendQR(){
+  if(!ev)return alert('ยังไม่ได้เริ่มรอบ');
+  const ids=Object.keys(R()),per=80,pages=Math.max(1,Math.ceil(ids.length/per));let h='';
+  for(let i=0;i<pages;i++){
+    const p='MU1|'+ev.id+'|'+dev+'|'+(i+1)+'/'+pages+'|'+ids.slice(i*per,(i+1)*per).join(',');
+    h+='<div class="qrbox"><b>หน้า '+(i+1)+'/'+pages+'</b><br>'+qrImg(p,5)+'</div>';
+  }
+  $('#sendOut').innerHTML='<p>รวม '+ids.length+' คน จากเครื่อง '+esc(dev)+'</p>'+h;
+}
+function merge(c){
+  const [,eid,from,pg,list]=c.split('|');
+  if(!ev){flash('เครื่องนี้ยังไม่ได้เริ่มรอบ','#b71c1c');return}
+  if(eid!==ev.id){flash('รอบไม่ตรงกัน: '+eid+' ≠ '+ev.id,'#b71c1c');beep(220);return}
+  const r=R();let n=0;
+  (list||'').split(',').filter(Boolean).forEach(id=>{if(!r[id]){r[id]={t:new Date().toISOString(),by:from,how:'MERGE'};n++}});
+  S.set('rec',rec);flash('รับยอดจาก '+from+' หน้า '+pg+' (+'+n+' คน)','#1565c0');beep(880);render();
+}
+
+/* ---------- กล้อง ---------- */
+let stream=null,det=null,wl=null,last='',lastT=0;
+const cv=document.createElement('canvas'),cx=cv.getContext('2d',{willReadFrequently:true});
+async function startCam(){
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})}
+  catch(e){return alert('เปิดกล้องไม่ได้: '+e.message+'\n(ต้องเปิดผ่าน https และอนุญาตกล้อง)')}
+  const v=$('#video');v.srcObject=stream;await v.play().catch(()=>{});
+  if(!det&&'BarcodeDetector' in window){try{det=new BarcodeDetector({formats:['qr_code']})}catch(e){}}
+  try{wl=await navigator.wakeLock.request('screen')}catch(e){}
+  $('#camBtn').textContent='⏹ ปิดกล้อง';tick();
+}
+function stopCam(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(wl&&wl.release)wl.release();wl=null;$('#camBtn').textContent='📷 เปิดกล้องสแกน'}
+async function tick(){
+  if(!stream)return;const v=$('#video');let code=null;
+  if(v.readyState>=2){try{
+    if(det){const r=await det.detect(v);if(r.length)code=r[0].rawValue}
+    else if(window.jsQR){
+      const sc=Math.min(1,800/v.videoWidth);cv.width=v.videoWidth*sc|0;cv.height=v.videoHeight*sc|0;
+      cx.drawImage(v,0,0,cv.width,cv.height);const d=cx.getImageData(0,0,cv.width,cv.height);
+      const r=jsQR(d.data,d.width,d.height,{inversionAttempts:'dontInvert'});if(r)code=r.data}
+  }catch(e){}}
+  if(code){const n=Date.now();if(code!==last||n-lastT>4000){last=code;lastT=n;onCode(code)}}
+  setTimeout(tick,120);
+}
+$('#camBtn').onclick=()=>stream?stopCam():startCam();
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCam()});
+
+/* ---------- UI ---------- */
+let ac;function beep(f){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();
+  o.frequency.value=f;g.gain.value=.25;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.15)}catch(e){}}
+function flash(t,c){const f=$('#flash');f.textContent=t;f.style.background=c;f.style.display='block';clearTimeout(f._t);f._t=setTimeout(()=>f.style.display='none',2200)}
+function go(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===t));if(t!=='scan')stopCam()}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
+function row(p,right){return'<div class="row"><div class="n"><b>'+esc(p.name)+'</b><br><small>'+esc(p.id)+' · '+esc(p.short||'')+' · '+esc(p.div)
+  +(p.en?' · '+esc(p.en):'')+'</small></div>'+right+'</div>'}
+$('#q').oninput=()=>{
+  const s=$('#q').value.trim().toLowerCase();if(!s){$('#qRes').innerHTML='';return}const r=R();
+  $('#qRes').innerHTML=people().filter(p=>(p.id+' '+p.name+' '+(p.short||'')+' '+(p.en||'')).toLowerCase().includes(s)).slice(0,15)
+    .map(p=>row(p,r[p.id]?'<span class="tag">✔ มาแล้ว</span>':'<button class="btn g" onclick="markM(\''+p.id+'\')">มาแล้ว</button>')).join('')||'<p>ไม่พบ</p>';
+};
+$('#mq').oninput=render;$('#divF').onchange=render;
+
+function render(){
+  const c=calc(),swOK=navigator.serviceWorker&&navigator.serviceWorker.controller;
+  $('#hdr').textContent=(site||'ทุกไซต์')+' · '+dev+' · '+(ev?ev.id:'ยังไม่เริ่มรอบ')+(swOK?' · ออฟไลน์พร้อม ✓':'');
+  $('#evBox').innerHTML=(ev?'<b>รอบ '+ev.id+'</b><div class="kpi" style="margin-top:6px"><div><b style="color:#2e7d32">'+c.here.length
+     +'</b>มาแล้ว</div><div><b style="color:#c62828">'+c.miss.length+'</b>ยังไม่มา</div></div>'
+    :'<b>ยังไม่ได้เริ่มรอบตรวจนับ</b><button class="btn w" onclick="quick(\'REAL\')">🚨 เริ่ม: เหตุจริง</button>'
+     +'<button class="btn s w" onclick="quick(\'DRILL\')">เริ่ม: ซ้อมอพยพ</button>')
+    +(emp.length?'':'<p style="color:#c62828">ยังไม่มีรายชื่อในเครื่อง → ตั้งค่า ข้อ 2</p>');
+  // ยังไม่มา
+  const df=$('#divF'),cur=df.value,divs=[...new Set(c.P.map(p=>p.div))].sort();
+  df.innerHTML='<option value="">ทุก Division</option>'+divs.map(d=>'<option'+(d===cur?' selected':'')+'>'+esc(d)+'</option>').join('');
+  const mq=$('#mq').value.trim().toLowerCase();
+  const ms=c.miss.filter(p=>(!cur||p.div===cur)&&(!mq||(p.id+' '+p.name+' '+p.short+' '+(p.en||'')).toLowerCase().includes(mq)))
+    .sort((a,b)=>a.div.localeCompare(b.div)||a.id.localeCompare(b.id));
+  $('#missN').textContent='ยังไม่มา '+ms.length+' คน';
+  $('#missList').innerHTML=ms.map(p=>row(p,(p.phone?'<a class="btn s" href="tel:'+esc(p.phone)+'">📞</a>':'')
+      +'<button class="btn g" onclick="markM(\''+p.id+'\')">✔</button><select onchange="setExc(\''+p.id+'\',this.value)"><option value="">…</option>'
+      +EXC.map(o=>'<option>'+o+'</option>').join('')+'</select>')).join('')
+    +(c.exs.length?'<h4>ยกเว้น ('+c.exs.length+')</h4>'+c.exs.map(p=>row(p,'<span class="tag">'+esc(c.x[p.id])
+      +'</span><button class="btn s" onclick="setExc(\''+p.id+'\',\'\')">↩</button>')).join(''):'');
+  // สรุป
+  const vAll=c.P.filter(p=>p.v),vMiss=c.miss.filter(p=>p.v);
+  $('#kpi').innerHTML=[['ต้องนับ',c.P.length-c.exs.length,''],['มาแล้ว',c.here.length,'#2e7d32'],['ยังไม่มา',c.miss.length,'#c62828'],
+    ['ยกเว้น',c.exs.length,''],['แขกในพื้นที่',vAll.length,''],['แขกยังไม่มา',vMiss.length,'#c62828']]
+    .map(k=>'<div><b style="color:'+(k[2]||'#222')+'">'+k[1]+'</b>'+k[0]+'</div>').join('')
+    +(c.other.length?'<div style="grid-column:span 2;text-align:left">สแกนแล้วแต่ไม่อยู่ในรายชื่อไซต์นี้: '+c.other.map(id=>esc(nameOf(id))).join(', ')+'</div>':'');
+  $('#divTable').innerHTML='<table style="width:100%;border-collapse:collapse"><tr><th align="left">Division</th><th>ทั้งหมด</th><th>มาแล้ว</th><th>ยังไม่มา</th></tr>'
+    +divs.map(d=>{const g=c.P.filter(p=>p.div===d),h=g.filter(p=>c.r[p.id]).length,m=g.filter(p=>!c.r[p.id]&&!c.x[p.id]).length;
+      return'<tr><td>'+esc(d)+'</td><td align="center">'+g.length+'</td><td align="center">'+h+'</td><td align="center" style="color:'
+      +(m?'#c62828':'#2e7d32')+'"><b>'+m+'</b></td></tr>'}).join('')+'</table>';
+  $('#hereList').innerHTML=c.here.sort((a,b)=>c.r[b.id].t.localeCompare(c.r[a.id].t)).map(p=>row(p,'<small>'
+    +new Date(c.r[p.id].t).toLocaleTimeString('th-TH')+'<br>'+esc(c.r[p.id].by)+'</small><button class="btn s" onclick="unmark(\''+p.id+'\')">↩</button>')).join('');
+  // แขก
+  const used=new Set(vis.filter(v=>!v.out).map(v=>v.card));
+  $('#vCard').innerHTML=Array.from({length:20},(_,i)=>'V'+String(i+1).padStart(2,'0')).filter(v=>!used.has(v)).map(v=>'<option>'+v+'</option>').join('');
+  $('#visList').innerHTML=vis.map((v,i)=>v.out?'':row({id:v.card,name:v.name,short:(v.co||'')+' · Host '+(v.host||'-'),
+    div:'เข้า '+new Date(v.in).toLocaleTimeString('th-TH')},'<button class="btn s" onclick="visOut('+i+')">Check-out</button>')).join('')||'<p>ไม่มีแขก</p>';
+  // ตั้งค่า
+  if(document.activeElement!==$('#devName'))$('#devName').value=dev;
+  const sites=[...new Set(emp.map(e=>e.site).filter(Boolean))];
+  $('#siteSel').innerHTML='<option value="">ทุกไซต์</option>'+sites.map(s=>'<option'+(s===site?' selected':'')+'>'+esc(s)+'</option>').join('');
+  const at=S.get('empAt',null),age=at?Math.floor((Date.now()-new Date(at))/864e5):null;
+  $('#empInfo').innerHTML='ในเครื่อง <b>'+emp.length+'</b> คน (ไซต์นี้ '+emp.filter(x=>!site||x.site===site).length+')'
+    +(at?' · อัปเดตเมื่อ '+age+' วันก่อน'+(age>30?' <b style="color:#c62828">ควรอัปเดต</b>':''):'');
+  $('#sysInfo').innerHTML='<small>อ่าน QR: '+('BarcodeDetector' in window?'ในตัวเครื่อง':window.jsQR?'jsQR':'<b style="color:#c62828">ไม่พร้อม</b>')
+    +' · สร้าง QR: '+(window.qrcode?'พร้อม':'<b style="color:#c62828">ไม่พร้อม</b>')+' · Offline: '+(swOK?'พร้อม':'ยังไม่พร้อม (ปิดแล้วเปิดแอปใหม่)')+'</small>';
+}
+
+/* ---------- แขก ---------- */
+function visIn(){
+  const c=$('#vCard').value,n=$('#vName').value.trim();if(!c)return alert('บัตรถูกใช้หมดแล้ว');if(!n)return alert('กรอกชื่อแขก');
+  vis.push({card:c,name:n,co:$('#vCo').value.trim(),phone:$('#vPhone').value.trim(),host:$('#vHost').value.trim(),in:new Date().toISOString(),out:null});
+  S.set('vis',vis);['vName','vCo','vPhone','vHost'].forEach(i=>$('#'+i).value='');render();flash('Check-in '+c+' : '+n,'#2e7d32');
+}
+function visOut(i){vis[i].out=new Date().toISOString();S.set('vis',vis);render()}
+
+/* ---------- ตั้งค่า / นำเข้า ---------- */
+function saveDev(){dev=$('#devName').value.replace(/[|,]/g,'').trim()||'Device';site=$('#siteSel').value;S.set('dev',dev);S.set('site',site);render();flash('บันทึกแล้ว','#1565c0')}
+function csvSplit(l){const o=[];let c='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];
+  if(q){if(ch=='"'){if(l[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}else if(ch=='"')q=true;else if(ch==','){o.push(c);c=''}else c+=ch}
+  o.push(c);return o}
+function importText(txt){
+  const L=String(txt).replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim());if(L.length<2)return alert('ไม่พบข้อมูล');
+  const sep=L[0].includes('\t')?'\t':',',sp=l=>sep==='\t'?l.split('\t'):csvSplit(l),H=sp(L[0]).map(h=>h.trim().toLowerCase());
+  const ix=(...ns)=>{for(const n of ns){const i=H.findIndex(h=>h.includes(n));if(i>=0)return i}return-1};
+  const c={id:ix('รหัส','empid','emp id'),name:ix('ชื่อเต็ม','nameth','ชื่อไทย','ชื่อ-สกุล'),short:ix('ชื่อย่อ','short'),
+    div:ix('division','แผนก','ฝ่าย'),site:ix('สถานที่','site','location'),en:ix('nameen','english','ชื่ออังกฤษ'),ph:ix('phone','โทร','เบอร์')};
+  if(c.id<0||c.name<0)return alert('ต้องมีคอลัมน์ "รหัสพนักงาน" และ "ชื่อเต็ม"');
+  const g=(r,i)=>i>=0?(r[i]||'').trim():'',out=[],seen=new Set();let dup=0;
+  L.slice(1).forEach(l=>{const r=sp(l),id=g(r,c.id).replace(/[^\w-]/g,'');if(!id)return;if(seen.has(id)){dup++;return}seen.add(id);
+    out.push({id,name:g(r,c.name),short:g(r,c.short),div:g(r,c.div)||'-',site:g(r,c.site),en:g(r,c.en),phone:g(r,c.ph)})});
+  emp=out;S.set('emp',emp);S.set('empAt',new Date().toISOString());$('#paste').value='';render();
+  alert('นำเข้า '+out.length+' คน'+(dup?' (ข้ามรหัสซ้ำ '+dup+')':''));
+}
+$('#file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>importText(r.result);r.readAsText(f,'utf-8')};
+function wipe(){if(confirm('ลบข้อมูลทั้งหมดในเครื่องนี้?')){Object.keys(localStorage).filter(k=>k.startsWith('mu_')).forEach(k=>localStorage.removeItem(k));location.reload()}}
+
+/* ---------- Export / พิมพ์ ---------- */
+function exportCSV(){
+  const e=ev||S.get('lastEv',null);if(!e)return alert('ไม่มีรอบให้ Export');
+  const r=rec[e.id]||{},x=exc[e.id]||{},P=people(),ids=new Set(P.map(p=>p.id));
+  const rows=[['EventID','รหัส','ชื่อ','Division','สถานะ','เวลา','ผู้บันทึก','วิธี']];
+  P.forEach(p=>{const a=r[p.id];rows.push([e.id,p.id,p.name,p.div,a?'มาแล้ว':(x[p.id]||'ยังไม่มา'),a?new Date(a.t).toLocaleString('th-TH'):'',a?a.by:'',a?a.how:''])});
+  Object.keys(r).filter(id=>!ids.has(id)).forEach(id=>rows.push([e.id,id,nameOf(id),'อื่น ๆ','มาแล้ว',new Date(r[id].t).toLocaleString('th-TH'),r[id].by,r[id].how]));
+  const csv='\uFEFF'+rows.map(a=>a.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='muster-'+e.id+'.csv';a.click();
+}
+function doPrint(h){$('#printArea').innerHTML=h;setTimeout(()=>window.print(),600)}
+function printStickers(){const L=emp.filter(x=>!site||x.site===site);
+  doPrint(L.map(e=>'<div class="st">'+qrImg(e.id,4)+'<br><b>'+esc(e.id)+'</b> '+esc(e.short)+'<br>'+esc(e.name)+'</div>').join(''))}
+function printVisCards(){let h='';for(let i=1;i<=20;i++){const c='V'+String(i).padStart(2,'0');
+  h+='<div class="vc"><b>VISITOR '+c+'</b><br>'+qrImg(c,6)+'<br><small>กรุณาคืนบัตรเมื่อออก</small></div>'}doPrint(h)}
+function printPaper(){
+  const L=emp.filter(x=>!site||x.site===site),divs=[...new Set(L.map(e=>e.div))].sort();
+  let h='<h2>รายชื่อตรวจนับ ณ จุดรวมพล — '+esc(site||'ทุกไซต์')+'</h2><p>พิมพ์ '+new Date().toLocaleString('th-TH')+' · รวม '+L.length+' คน</p>';
+  divs.forEach(d=>{const g=L.filter(e=>e.div===d);h+='<h3>'+esc(d)+' ('+g.length+')</h3><table><tr><th width="30">✓</th><th>รหัส</th><th>ชื่อ</th><th>ชื่อย่อ</th><th>โทร</th></tr>'
+    +g.map(e=>'<tr><td></td><td>'+esc(e.id)+'</td><td>'+esc(e.name)+'</td><td>'+esc(e.short)+'</td><td>'+esc(e.phone)+'</td></tr>').join('')+'</table>'});
+  h+='<h3>แขก / ผู้รับเหมา</h3><table><tr><th width="30">✓</th><th>บัตร</th><th>ชื่อ</th><th>บริษัท</th><th>Host</th></tr>'
+    +'<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>'.repeat(12)+'</table>';
+  doPrint(h);
+}
+
+/* ---------- เริ่มต้น ---------- */
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').then(()=>setTimeout(render,1500));
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
+render();
+</script>
+</body>
+</html>
