@@ -41,7 +41,7 @@ td,th{padding:4px;border-bottom:1px solid #eee}
 </style>
 </head>
 <body>
-<header><h1>🚨 Muster Roll Call</h1><small id="hdr"></small></header>
+<header><h1>🚨 Evacuation Roll Call</h1><small id="hdr"></small></header>
 <nav>
  <button data-t="scan" class="on">สแกน</button><button data-t="miss">ยังไม่มา</button>
  <button data-t="dash">สรุป</button><button data-t="vis">แขก</button><button data-t="set">ตั้งค่า</button>
@@ -308,7 +308,7 @@ function exportCSV(){
   P.forEach(p=>{const a=r[p.id];rows.push([e.id,p.id,p.name,p.div,a?'มาแล้ว':(x[p.id]||'ยังไม่มา'),a?new Date(a.t).toLocaleString('th-TH'):'',a?a.by:'',a?a.how:''])});
   Object.keys(r).filter(id=>!ids.has(id)).forEach(id=>rows.push([e.id,id,nameOf(id),'อื่น ๆ','มาแล้ว',new Date(r[id].t).toLocaleString('th-TH'),r[id].by,r[id].how]));
   const csv='\uFEFF'+rows.map(a=>a.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='muster-'+e.id+'.csv';a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='Evacuation-'+e.id+'.csv';a.click();
 }
 function doPrint(h){$('#printArea').innerHTML=h;setTimeout(()=>window.print(),600)}
 function printStickers(){const L=emp.filter(x=>!site||x.site===site);
