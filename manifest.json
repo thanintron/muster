@@ -1,6 +1,6 @@
 {
-  "name": "Muster Roll Call",
-  "short_name": "Muster",
+  "name": "Evacuation Roll Call",
+  "short_name": "Evacuation",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
